@@ -1,0 +1,91 @@
+
+
+1. 安装 Docker
+2. 安装 Docker-Compose.
+3. sudo useradd -d /home/wekan -m -s /bin/bash wekan
+4. sudo usermod -aG docker wekan
+5. 创建文本文件： /home/wekan/docker-compose.yml
+
+把如下内容放入到上面这个文件：
+================>>
+wekan:
+  image: mquandalle/wekan
+  restart: always
+  links:
+    - wekandb
+  environment:
+    - MONGO_URL=mongodb://wekandb/wekan
+    - ROOT_URL=http://mytodo.org
+    - MAIL_URL=
+    - MAIL_FROM=
+  ports:
+    - 8081:80
+
+wekandb:
+   image: mongo
+   restart: always
+   volumes:
+     - /home/wekan/data:/data/db
+================<<
+
+6.root权限执行下面命令安装apache2：
+   apt-get install apache2 
+
+7. 以root权限执行： 
+   a2enmod proxy proxy_http proxy_wstunnel
+   service apache2 restart
+
+8. 编辑文本文件： 
+   /etc/apache2/sites-available/mytodo.org.conf
+
+把如下内容放入到：
+===========>>
+<VirtualHost *:80>
+        ServerName mytodo.org
+        ServerAdmin webmaster@mytodo.org
+
+        DocumentRoot /var/www-vhosts/mytodo.org
+        <Directory />
+                Options FollowSymLinks
+                AllowOverride AuthConfig FileInfo Indexes Options=MultiViews
+        </Directory>
+
+        <Directory /var/www-vhosts/mytodo.org>
+                Options -Indexes +FollowSymLinks +MultiViews
+                AllowOverride AuthConfig FileInfo Indexes Options=MultiViews
+                Require all granted
+        </Directory>
+
+        ErrorLog /var/log/apache2/mytodo.org-error.log
+
+        # Possible values include: debug, info, notice, warn, error, crit,
+        # alert, emerg.
+        LogLevel warn
+
+        CustomLog /var/log/apache2/mytodo.org-access.log combined
+        ServerSignature Off
+
+        ProxyPassMatch   "^/(sockjs\/.*\/websocket)$" "ws://127.0.0.1:8081/$1"
+        ProxyPass        "/" "http://127.0.0.1:8081/"
+        ProxyPassReverse "/" "http://127.0.0.1:8081/"
+</VirtualHost>
+======================<<
+
+
+9. 以root权限执行：
+    a2ensite mytodo.org
+    service apache2 reload
+
+10. 在这个目录：
+    /home/wekan
+    执行：
+    docker-compose up -d
+
+
+
+
+
+
+
+
+
